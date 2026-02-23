@@ -11,16 +11,22 @@
 	<groupId>org.cifipAviles</groupId>
 	<artifactId>Planetas_AD_v2</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
 	<name>Planetas_AD_v2</name>
 	<description>API REST Planetas AD v2</description>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>20</java.version>
 		<jjwt.version>0.11.5</jjwt.version>
 	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
