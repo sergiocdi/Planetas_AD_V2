@@ -134,4 +134,12 @@ public class PartidaService {
             planetaRepository.save(ganador);
         }
     }
+
+    public List<Partida> obtenerTodas() {
+        return partidaRepository.findAll();
+    }
+
+    public Partida obtenerPorId(Long id) {
+        return partidaRepository.findById(id).orElse(null);
+    }
 }

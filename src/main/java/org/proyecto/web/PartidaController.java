@@ -73,4 +73,15 @@ public class PartidaController {
         partidaService.finalizarPartidaConPosiciones(partidaId, jugadores);
         return ResponseEntity.ok(Map.of("status", "finalizada"));
     }
+
+    @GetMapping
+    public List<Partida> listarTodas() {
+        return partidaService.obtenerTodas();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Partida> obtenerPorId(@PathVariable Long id) {
+        Partida p = partidaService.obtenerPorId(id);
+        return p != null ? ResponseEntity.ok(p) : ResponseEntity.notFound().build();
+    }
 }
