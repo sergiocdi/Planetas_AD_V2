@@ -6,33 +6,37 @@ import org.proyecto.service.UsuarioService;
 import org.proyecto.service.PlanetaService;
 import org.proyecto.service.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * Controller para gestión de usuarios.
+ * NOTA: Esta versión está diseñada para ser consumida por un middleware.
+ * El middleware se autentica con un usuario admin y realiza operaciones
+ * en nombre de los usuarios del juego.
+ */
 @RestController
 @RequestMapping("/api/usuarios")
 public class UsuarioController {
     private final UsuarioService usuarioService;
     private final PlanetaService planetaService;
-    private final AuthService authService;
 
-    public UsuarioController(UsuarioService usuarioService, PlanetaService planetaService, AuthService authService) {
+    public UsuarioController(UsuarioService usuarioService, PlanetaService planetaService) {
         this.usuarioService = usuarioService;
         this.planetaService = planetaService;
-        this.authService = authService;
     }
 
+    /**
+     * Crear un nuevo usuario (jugador)
+     * El middleware crea usuarios en nombre del sistema de juego
+     */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Usuario u) {
         Usuario savedUser = usuarioService.create(u);
-        String token = authService.generateToken(savedUser);
-
         return ResponseEntity.ok(Map.of(
-                "token", token,
                 "id", savedUser.getId(),
                 "nickname", savedUser.getNickname(),
                 "monedas", savedUser.getMonedas(),
@@ -48,30 +52,21 @@ public class UsuarioController {
         return usuarioService.get(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
-    // Nuevo endpoint: lista de planetas del usuario por id (requiere token)
+    /**
+     * Lista de planetas del usuario por id
+     * El middleware consulta los planetas de cualquier usuario
+     */
     @GetMapping("/{id}/planetas")
-    public ResponseEntity<List<Planeta>> getPlanetasDelUsuario(@PathVariable Long id, Authentication authentication) {
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        Long authUserId = (Long) authentication.getPrincipal();
-        // Permitir que solo el propio usuario consulte sus planetas (o relajar esta política si no es necesario)
-        /*if (!authUserId.equals(id)) {
-            return ResponseEntity.status(403).build();
-        }*/
+    public ResponseEntity<List<Planeta>> getPlanetasDelUsuario(@PathVariable Long id) {
         return ResponseEntity.ok(planetaService.listByUsuarioId(id));
     }
 
-    // Comprar un planeta: recibe nombre y tipo del planeta; valida monedas y devuelve lista actualizada o error
+    /**
+     * Comprar un planeta para un usuario específico
+     * El middleware indica el usuario que compra el planeta mediante el path {id}
+     */
     @PostMapping("/{id}/comprar-planeta")
-    public ResponseEntity<?> comprarPlaneta(@PathVariable Long id, @RequestBody Map<String, String> req, Authentication authentication) {
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return ResponseEntity.status(401).build();
-        }
-        Long authUserId = (Long) authentication.getPrincipal();
-        if (!authUserId.equals(id)) {
-            return ResponseEntity.status(403).build();
-        }
+    public ResponseEntity<?> comprarPlaneta(@PathVariable Long id, @RequestBody Map<String, String> req) {
         String nombre = req.get("nombre");
         String tipo = req.get("tipo");
         if (nombre == null || nombre.isBlank() || tipo == null || tipo.isBlank()) {
@@ -89,8 +84,12 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    public Usuario update(@PathVariable Long id, @RequestBody Usuario u) { return usuarioService.update(id, u); }
+    public Usuario update(@PathVariable Long id, @RequestBody Usuario u) { 
+        return usuarioService.update(id, u); 
+    }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id) { usuarioService.delete(id); }
+    public void delete(@PathVariable Long id) { 
+        usuarioService.delete(id); 
+    }
 }

@@ -4,18 +4,25 @@ import org.proyecto.domain.Participante;
 import org.proyecto.domain.Partida;
 import org.proyecto.service.PartidaService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller para gestión de partidas.
+ * NOTA: Esta versión está diseñada para ser consumida por un middleware.
+ */
 @RestController
 @RequestMapping("/api/partidas")
 public class PartidaController {
     private final PartidaService partidaService;
-    public PartidaController(PartidaService partidaService) { this.partidaService = partidaService; }
+    
+    public PartidaController(PartidaService partidaService) { 
+        this.partidaService = partidaService; 
+    }
 
+    @SuppressWarnings("unchecked")
     @PostMapping("/guardar")
     public ResponseEntity<Partida> guardar(@RequestBody Map<String, Object> req) {
         Map<String, Object> partidaMap = (Map<String, Object>) req.get("partida");
@@ -23,6 +30,7 @@ public class PartidaController {
         if (partidaMap.get("id") != null) partida.setId(Long.valueOf(partidaMap.get("id").toString()));
         partida.setEstado((String) partidaMap.get("estado"));
         partida.setNumeroRonda(Integer.parseInt(partidaMap.get("numeroRonda").toString()));
+        
         List<Map<String, Object>> parts = (List<Map<String, Object>>) req.get("participantes");
         List<Participante> participantes = parts.stream().map(m -> {
             Participante p = new Participante();
@@ -58,12 +66,12 @@ public class PartidaController {
         return ResponseEntity.ok(Map.of("status", "finalizada"));
     }
 
-    // Nuevo: finalizar partida con posiciones (requiere token)
+    /**
+     * Finalizar partida con posiciones
+     * El middleware envía las posiciones de cada jugador
+     */
     @PostMapping("/finalizar-con-posiciones")
-    public ResponseEntity<?> finalizarConPosiciones(@RequestBody Map<String, Object> req, Authentication authentication) {
-        if (authentication == null || authentication.getPrincipal() == null) {
-            return ResponseEntity.status(401).build();
-        }
+    public ResponseEntity<?> finalizarConPosiciones(@RequestBody Map<String, Object> req) {
         Long partidaId = Long.valueOf(req.get("idPartida").toString());
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> jugadores = (List<Map<String, Object>>) req.get("jugadores");

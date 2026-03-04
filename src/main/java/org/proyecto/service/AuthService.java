@@ -20,8 +20,23 @@ public class AuthService {
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final Key key = Keys.hmacShaKeyFor(Decoders.BASE64.decode("uVv1oZQe3lq3Jw9uXlZkY2h0b3Rlc3QxMjM0NTY3ODkwMTIzNDU2Nzg5MDEyMzQ1Njc4OTA="));
 
+    // Nickname del usuario administrador (middleware)
+    public static final String ADMIN_NICKNAME = "middleware_admin";
+
     public AuthService(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
+    }
+
+    /**
+     * Login exclusivo para el usuario administrador (middleware)
+     */
+    public String loginAdmin(String nickname, String rawPassword) {
+        if (!ADMIN_NICKNAME.equals(nickname)) {
+            return null; // Solo el admin puede hacer login
+        }
+        Optional<Usuario> opt = authenticate(nickname, rawPassword);
+        if (opt.isEmpty()) return null;
+        return generateToken(opt.get());
     }
 
     public String login(String nickname, String rawPassword) {
