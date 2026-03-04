@@ -32,6 +32,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/usuarios/**").permitAll()
                     .requestMatchers("/api/partidas/**").permitAll()
+                    .requestMatchers("/api/estadisticas/**").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

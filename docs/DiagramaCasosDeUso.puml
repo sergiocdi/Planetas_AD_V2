@@ -1,0 +1,142 @@
+@startuml DiagramaCasosDeUso
+
+title Diagrama de Casos de Uso - Planetas AD v2
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+' ==================== ACTORES ====================
+
+actor "Usuario No\nAutenticado" as guest
+actor "Usuario\nAutenticado" as user
+actor "Sistema de\nJuego" as game
+actor "Administrador" as admin
+
+' ==================== SISTEMA ====================
+
+rectangle "Sistema Planetas AD v2" {
+    
+    ' ---------- AUTENTICACIÓN ----------
+    package "Autenticación" {
+        usecase "UC-01\nRegistrarse" as UC01
+        usecase "UC-02\nIniciar Sesión" as UC02
+        usecase "UC-03\nCerrar Sesión" as UC03
+    }
+    
+    ' ---------- GESTIÓN USUARIOS ----------
+    package "Gestión de Usuarios" {
+        usecase "UC-04\nConsultar Perfil" as UC04
+        usecase "UC-05\nActualizar Perfil" as UC05
+        usecase "UC-06\nEliminar Cuenta" as UC06
+        usecase "UC-07\nListar Usuarios" as UC07
+    }
+    
+    ' ---------- GESTIÓN PLANETAS ----------
+    package "Gestión de Planetas" {
+        usecase "UC-08\nComprar Planeta" as UC08
+        usecase "UC-09\nVer Mis Planetas" as UC09
+        usecase "UC-10\nVer Todos los Planetas" as UC10
+        usecase "UC-11\nVer Ranking Planetas" as UC11
+        usecase "UC-12\nActualizar Planeta" as UC12
+        usecase "UC-13\nEliminar Planeta" as UC13
+    }
+    
+    ' ---------- GESTIÓN PARTIDAS ----------
+    package "Gestión de Partidas" {
+        usecase "UC-14\nGuardar Partida" as UC14
+        usecase "UC-15\nFinalizar Partida" as UC15
+        usecase "UC-16\nFinalizar Partida\ncon Posiciones" as UC16
+        usecase "UC-17\nVer Partidas" as UC17
+        usecase "UC-18\nVer Detalle Partida" as UC18
+    }
+    
+    ' ---------- ESTADÍSTICAS ----------
+    package "Estadísticas (MongoDB)" {
+        usecase "UC-19\nCopiar Partidas\na MongoDB" as UC19
+        usecase "UC-20\nVer Partidas\nHistóricas" as UC20
+        usecase "UC-21\nVer Usuario Top" as UC21
+        usecase "UC-22\nVer Tipo Planeta Top" as UC22
+        usecase "UC-23\nVer Ranking Usuarios" as UC23
+        usecase "UC-24\nVer Ranking\nTipos Planeta" as UC24
+    }
+}
+
+' ==================== RELACIONES GUEST ====================
+
+guest --> UC01
+guest --> UC02
+
+' ==================== RELACIONES USER ====================
+
+user --> UC03
+user --> UC04
+user --> UC05
+user --> UC06
+user --> UC08
+user --> UC09
+user --> UC10
+user --> UC11
+user --> UC12
+user --> UC13
+user --> UC16
+user --> UC17
+user --> UC18
+user --> UC20
+user --> UC21
+user --> UC22
+user --> UC23
+user --> UC24
+
+' ==================== RELACIONES GAME ====================
+
+game --> UC14
+game --> UC15
+
+' ==================== RELACIONES ADMIN ====================
+
+admin --> UC07
+admin --> UC19
+
+' ==================== EXTENSIONES E INCLUSIONES ====================
+
+UC01 ..> UC02 : <<include>>
+UC08 ..> UC09 : <<include>>
+
+UC15 <.. UC16 : <<extends>>
+
+' ==================== NOTAS ====================
+
+note right of UC08
+  **Tipos de Planeta:**
+  - Normal: 200 monedas
+  - Fuego: 300 monedas
+  - Agua: 300 monedas
+  - Planta: 300 monedas
+  - Aire: 350 monedas
+  - Roca: 500 monedas
+end note
+
+note right of UC15
+  **Recompensas:**
+  - Ganador: +200 monedas
+  - Perdedor: +50 monedas
+  - Perdedor: -1 vida planeta
+end note
+
+note right of UC16
+  **Sistema de Premios:**
+  1º: 500 monedas
+  2º: 450 monedas
+  3º: 400 monedas
+  ...
+  Fórmula: 500 - 50*(pos-1)
+end note
+
+note bottom of UC19
+  Sincroniza datos
+  de MySQL a MongoDB
+  para análisis
+end note
+
+@enduml

@@ -1,0 +1,386 @@
+@startuml DiagramaClases
+
+title Diagrama de Clases - Planetas AD v2
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+' ==================== DOMINIO MYSQL ====================
+
+package "org.proyecto.domain" {
+    
+    abstract class Auditable {
+        # createdAt: LocalDateTime
+        # updatedAt: LocalDateTime
+    }
+    
+    class Usuario {
+        - id: Long
+        - nombre: String
+        - apellidos: String
+        - nickname: String
+        - password: String
+        - email: String
+        - monedas: int
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getNombre(): String
+        + setNombre(nombre: String): void
+        + getApellidos(): String
+        + setApellidos(apellidos: String): void
+        + getNickname(): String
+        + setNickname(nickname: String): void
+        + getPassword(): String
+        + setPassword(password: String): void
+        + getEmail(): String
+        + setEmail(email: String): void
+        + getMonedas(): int
+        + setMonedas(monedas: int): void
+    }
+    
+    class Planeta {
+        - id: Long
+        - nombre: String
+        - tipo: String
+        - vidas: int = 5
+        - numeroVictorias: int
+        - usuario: Usuario
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getNombre(): String
+        + setNombre(nombre: String): void
+        + getTipo(): String
+        + setTipo(tipo: String): void
+        + getVidas(): int
+        + setVidas(vidas: int): void
+        + getNumeroVictorias(): int
+        + setNumeroVictorias(victorias: int): void
+        + getUsuario(): Usuario
+        + setUsuario(usuario: Usuario): void
+    }
+    
+    class Partida {
+        - id: Long
+        - estado: String
+        - numeroRonda: int
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getEstado(): String
+        + setEstado(estado: String): void
+        + getNumeroRonda(): int
+        + setNumeroRonda(ronda: int): void
+    }
+    
+    class Participante {
+        - id: Long
+        - partida: Partida
+        - usuario: Usuario
+        - planeta: Planeta
+        - vida: int
+        --
+        + getId(): Long
+        + setId(id: Long): void
+        + getPartida(): Partida
+        + setPartida(partida: Partida): void
+        + getUsuario(): Usuario
+        + setUsuario(usuario: Usuario): void
+        + getPlaneta(): Planeta
+        + setPlaneta(planeta: Planeta): void
+        + getVida(): int
+        + setVida(vida: int): void
+    }
+}
+
+' ==================== DOCUMENTOS MONGODB ====================
+
+package "org.proyecto.estadisticas.document" {
+    
+    class PartidaDoc <<Document>> {
+        - id: String
+        - partidaIdMysql: Long
+        - estado: String
+        - numeroRonda: int
+        - participantes: List<ParticipanteDoc>
+        - fechaCreacion: LocalDateTime
+        - fechaCopiado: LocalDateTime
+        --
+        + getters/setters
+    }
+    
+    class ParticipanteDoc {
+        - participanteId: Long
+        - usuarioId: Long
+        - usuarioNickname: String
+        - planetaId: Long
+        - planetaNombre: String
+        - planetaTipo: String
+        - vida: int
+        - ganador: boolean
+        --
+        + getters/setters
+    }
+}
+
+' ==================== DTOs ====================
+
+package "org.proyecto.estadisticas.dto" {
+    
+    class UsuarioEstadisticaDTO {
+        - usuarioId: Long
+        - nickname: String
+        - partidasGanadas: long
+        --
+        + getters/setters
+    }
+    
+    class TipoPlanetaEstadisticaDTO {
+        - tipoPlaneta: String
+        - partidasGanadas: long
+        --
+        + getters/setters
+    }
+}
+
+' ==================== REPOSITORIOS ====================
+
+package "org.proyecto.repository" {
+    
+    interface UsuarioRepository <<JpaRepository>> {
+        + findByNickname(nickname: String): Optional<Usuario>
+    }
+    
+    interface PlanetaRepository <<JpaRepository>> {
+        + findByUsuarioId(usuarioId: Long): List<Planeta>
+        + findTopByVictorias(): List<Planeta>
+    }
+    
+    interface PartidaRepository <<JpaRepository>> {
+    }
+    
+    interface ParticipanteRepository <<JpaRepository>> {
+        + findByPartidaId(partidaId: Long): List<Participante>
+    }
+}
+
+package "org.proyecto.estadisticas.repository" {
+    
+    interface PartidaDocRepository <<MongoRepository>> {
+        + findByPartidaIdMysql(id: Long): Optional<PartidaDoc>
+        + existsByPartidaIdMysql(id: Long): boolean
+    }
+}
+
+' ==================== SERVICIOS ====================
+
+package "org.proyecto.service" {
+    
+    class AuthService {
+        - usuarioRepository: UsuarioRepository
+        - passwordEncoder: BCryptPasswordEncoder
+        - jwtSecret: String
+        --
+        + authenticate(nickname: String, password: String): Optional<Usuario>
+        + generateToken(usuario: Usuario): String
+        + validateToken(token: String): Long
+        + encode(password: String): String
+    }
+    
+    class UsuarioService {
+        - usuarioRepository: UsuarioRepository
+        - authService: AuthService
+        --
+        + create(usuario: Usuario): Usuario
+        + list(): List<Usuario>
+        + get(id: Long): Optional<Usuario>
+        + update(id: Long, usuario: Usuario): Usuario
+        + delete(id: Long): void
+    }
+    
+    class PlanetaService {
+        - planetaRepository: PlanetaRepository
+        - usuarioRepository: UsuarioRepository
+        - {static} COSTES: Map<String, Integer>
+        --
+        + create(planeta: Planeta, usuarioId: Long): Planeta
+        + list(): List<Planeta>
+        + ranking(): List<Planeta>
+        + listByUsuarioId(usuarioId: Long): List<Planeta>
+        + update(id: Long, planeta: Planeta): Planeta
+        + delete(id: Long): void
+    }
+    
+    class PartidaService {
+        - partidaRepository: PartidaRepository
+        - participanteRepository: ParticipanteRepository
+        - usuarioRepository: UsuarioRepository
+        - planetaRepository: PlanetaRepository
+        --
+        + guardarPartida(partida: Partida, participantes: List<Participante>): Partida
+        + finalizarPartida(partidaId: Long, idGanador: Long): void
+        + finalizarPartidaConPosiciones(partidaId: Long, jugadores: List<Map>): void
+        + obtenerTodas(): List<Partida>
+        + obtenerPorId(id: Long): Partida
+    }
+}
+
+package "org.proyecto.estadisticas.service" {
+    
+    class EstadisticasService {
+        - partidaRepository: PartidaRepository
+        - participanteRepository: ParticipanteRepository
+        - partidaDocRepository: PartidaDocRepository
+        --
+        + copiarPartidasAMongo(): int
+        + listarTodasLasPartidas(): List<PartidaDoc>
+        + obtenerUsuarioConMasVictorias(): UsuarioEstadisticaDTO
+        + obtenerTipoPlanetaConMasVictorias(): TipoPlanetaEstadisticaDTO
+        + obtenerRankingUsuarios(): List<UsuarioEstadisticaDTO>
+        + obtenerRankingTiposPlaneta(): List<TipoPlanetaEstadisticaDTO>
+    }
+}
+
+' ==================== CONTROLADORES ====================
+
+package "org.proyecto.web" {
+    
+    class AuthController <<RestController>> {
+        - authService: AuthService
+        - planetaService: PlanetaService
+        --
+        + login(req: Map): ResponseEntity
+        + logout(): ResponseEntity
+    }
+    
+    class UsuarioController <<RestController>> {
+        - usuarioService: UsuarioService
+        - planetaService: PlanetaService
+        - authService: AuthService
+        --
+        + create(usuario: Usuario): ResponseEntity
+        + list(): List<Usuario>
+        + get(id: Long): ResponseEntity<Usuario>
+        + getPlanetasDelUsuario(id: Long): ResponseEntity<List<Planeta>>
+        + comprarPlaneta(id: Long, req: Map): ResponseEntity
+        + update(id: Long, usuario: Usuario): Usuario
+        + delete(id: Long): void
+    }
+    
+    class PlanetaController <<RestController>> {
+        - planetaService: PlanetaService
+        --
+        + create(planeta: Planeta): ResponseEntity
+        + list(): List<Planeta>
+        + ranking(): List<Map>
+        + update(id: Long, planeta: Planeta): Planeta
+        + delete(id: Long): void
+    }
+    
+    class PartidaController <<RestController>> {
+        - partidaService: PartidaService
+        --
+        + guardar(req: Map): ResponseEntity<Partida>
+        + finalizar(req: Map): ResponseEntity
+        + finalizarConPosiciones(req: Map): ResponseEntity
+        + listarTodas(): List<Partida>
+        + obtenerPorId(id: Long): ResponseEntity<Partida>
+    }
+}
+
+package "org.proyecto.estadisticas.web" {
+    
+    class EstadisticasController <<RestController>> {
+        - estadisticasService: EstadisticasService
+        --
+        + copiarPartidas(): ResponseEntity<Map>
+        + listarPartidas(): ResponseEntity<List<PartidaDoc>>
+        + obtenerUsuarioTop(): ResponseEntity<UsuarioEstadisticaDTO>
+        + obtenerTipoPlanetaTop(): ResponseEntity<TipoPlanetaEstadisticaDTO>
+        + obtenerRankingUsuarios(): ResponseEntity<List<UsuarioEstadisticaDTO>>
+        + obtenerRankingTiposPlaneta(): ResponseEntity<List<TipoPlanetaEstadisticaDTO>>
+    }
+}
+
+' ==================== CONFIGURACIÓN ====================
+
+package "org.proyecto.config" {
+    
+    class SecurityConfig <<Configuration>> {
+        - jwtAuthFilter: JwtAuthFilter
+        --
+        + filterChain(http: HttpSecurity): SecurityFilterChain
+        + corsConfigurationSource(): CorsConfigurationSource
+    }
+    
+    class JwtAuthFilter <<Component>> {
+        - authService: AuthService
+        --
+        # doFilterInternal(request, response, chain): void
+    }
+}
+
+package "org.proyecto.estadisticas.config" {
+    
+    class MongoConfig <<Configuration>> {
+        - mongoUri: String
+        --
+        + mongoClient(): MongoClient
+        + mongoTemplate(): MongoTemplate
+    }
+}
+
+' ==================== RELACIONES ====================
+
+' Herencia
+Usuario --|> Auditable
+Planeta --|> Auditable
+Partida --|> Auditable
+Participante --|> Auditable
+
+' Asociaciones Dominio
+Usuario "1" -- "0..*" Planeta : posee >
+Partida "1" -- "0..*" Participante : tiene >
+Participante "0..*" -- "1" Usuario : pertenece a >
+Participante "0..*" -- "1" Planeta : usa >
+
+' Documentos MongoDB
+PartidaDoc "1" *-- "0..*" ParticipanteDoc : contiene >
+
+' Repositorios con Entidades
+UsuarioRepository ..> Usuario : gestiona
+PlanetaRepository ..> Planeta : gestiona
+PartidaRepository ..> Partida : gestiona
+ParticipanteRepository ..> Participante : gestiona
+PartidaDocRepository ..> PartidaDoc : gestiona
+
+' Servicios con Repositorios
+AuthService --> UsuarioRepository : usa
+UsuarioService --> UsuarioRepository : usa
+UsuarioService --> AuthService : usa
+PlanetaService --> PlanetaRepository : usa
+PlanetaService --> UsuarioRepository : usa
+PartidaService --> PartidaRepository : usa
+PartidaService --> ParticipanteRepository : usa
+PartidaService --> UsuarioRepository : usa
+PartidaService --> PlanetaRepository : usa
+EstadisticasService --> PartidaRepository : usa
+EstadisticasService --> ParticipanteRepository : usa
+EstadisticasService --> PartidaDocRepository : usa
+
+' Controladores con Servicios
+AuthController --> AuthService : usa
+AuthController --> PlanetaService : usa
+UsuarioController --> UsuarioService : usa
+UsuarioController --> PlanetaService : usa
+UsuarioController --> AuthService : usa
+PlanetaController --> PlanetaService : usa
+PartidaController --> PartidaService : usa
+EstadisticasController --> EstadisticasService : usa
+
+' Configuración
+SecurityConfig --> JwtAuthFilter : usa
+JwtAuthFilter --> AuthService : usa
+
+@enduml
